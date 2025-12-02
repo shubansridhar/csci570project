@@ -2,8 +2,9 @@ import sys
 import time
 import psutil
 
-# Constants
+# gap penalty 
 DELTA = 30
+# mismatch costs
 ALPHA = {
     ('A', 'A'): 0, ('A', 'C'): 110, ('A', 'G'): 48, ('A', 'T'): 94,
     ('C', 'A'): 110, ('C', 'C'): 0, ('C', 'G'): 118, ('C', 'T'): 48,
@@ -14,8 +15,8 @@ ALPHA = {
 def generate_string(base_str, indices):
     """Generate string by iteratively inserting at specified indices"""
     s = base_str
-    for idx in indices:
-        s = s[:idx+1] + s + s[idx+1:]
+    for index in indices:
+        s = s[:index+1] + s + s[index+1:]
     return s
 
 def read_input(file_path):
@@ -23,26 +24,26 @@ def read_input(file_path):
     with open(file_path, 'r') as f:
         lines = [line.strip() for line in f.readlines()]
     
-    # Parse first string
-    idx = 0
-    base_str1 = lines[idx]
-    idx += 1
+    # parse first string
+    index = 0
+    base_str1 = lines[index]
+    index += 1
     
     indices1 = []
-    while idx < len(lines) and lines[idx].isdigit():
-        indices1.append(int(lines[idx]))
-        idx += 1
+    while index < len(lines) and lines[index].isdigit():
+        indices1.append(int(lines[index]))
+        index += 1
     
-    # Parse second string
-    base_str2 = lines[idx]
-    idx += 1
+    # parse second string
+    base_str2 = lines[index]
+    index += 1
     
     indices2 = []
-    while idx < len(lines) and lines[idx].isdigit():
-        indices2.append(int(lines[idx]))
-        idx += 1
+    while index < len(lines) and lines[index].isdigit():
+        indices2.append(int(lines[index]))
+        index += 1
     
-    # Generate strings
+    # generate strings
     str1 = generate_string(base_str1, indices1)
     str2 = generate_string(base_str2, indices2)
     
@@ -50,12 +51,12 @@ def read_input(file_path):
 
 def compute_alignment_cost_forward(x, y):
     """
-    Compute alignment costs using space-efficient DP (forward direction)
-    Returns: array of costs for last row
+    Computes alignment costs using space-efficient DP (forward direction)
+    Returns array of costs for last row
     """
     m, n = len(x), len(y)
     
-    # Only keep two rows
+    # only keep two rows
     prev = [j * DELTA for j in range(n + 1)]
     curr = [0] * (n + 1)
     
@@ -73,11 +74,11 @@ def compute_alignment_cost_forward(x, y):
 def compute_alignment_cost_backward(x, y):
     """
     Compute alignment costs using space-efficient DP (backward direction)
-    Returns: array of costs for first row (when going backwards from end)
+    Returns array of costs for first row
     """
     m, n = len(x), len(y)
     
-    # Initialize for going backwards
+    # initialize for going backwards
     prev = [(n - j) * DELTA for j in range(n + 1)]
     curr = [0] * (n + 1)
     
@@ -94,24 +95,23 @@ def compute_alignment_cost_backward(x, y):
 
 def hirschberg(x, y):
     """
-    Hirschberg's divide-and-conquer algorithm for memory-efficient alignment
-    Returns: aligned x, aligned y
+    Hirschberg's divide-and-conquer algorithm 
+    Returns aligned x and y strings
     """
     m, n = len(x), len(y)
     
-    # Base cases
+    # base cases
     if m == 0:
         return '_' * n, y
     if n == 0:
         return x, '_' * m
     if m == 1:
-        # For single character in x, find best alignment with y
-        # Option 1: align x[0] with some y[j]
+        # for single character in x, find best alignment with y
         min_cost = float('inf')
         best_j = 0
         
         for j in range(n + 1):
-            # Cost: gaps before + match/mismatch + gaps after
+            # cost = gaps before + match/mismatch + gaps after
             if j < n:
                 cost = j * DELTA + ALPHA[(x[0], y[j])] + (n - j - 1) * DELTA
             else:
@@ -122,16 +122,16 @@ def hirschberg(x, y):
                 best_j = j
         
         if best_j < n:
-            align_x = '_' * best_j + x[0] + '_' * (n - best_j - 1)
-            align_y = y
+            aligned_x = '_' * best_j + x[0] + '_' * (n - best_j - 1)
+            aligned_y = y
         else:
-            align_x = '_' * n + x[0]
-            align_y = y + '_'
+            aligned_x = '_' * n + x[0]
+            aligned_y = y + '_'
         
-        return align_x, align_y
+        return aligned_x, aligned_y
     
     if n == 1:
-        # For single character in y, find best alignment with x
+        # for single character in y, find best alignment with x 
         min_cost = float('inf')
         best_i = 0
         
@@ -146,22 +146,22 @@ def hirschberg(x, y):
                 best_i = i
         
         if best_i < m:
-            align_x = x
-            align_y = '_' * best_i + y[0] + '_' * (m - best_i - 1)
+            aligned_x = x
+            aligned_y = '_' * best_i + y[0] + '_' * (m - best_i - 1)
         else:
-            align_x = x + '_'
-            align_y = '_' * m + y[0]
+            aligned_x = x + '_'
+            aligned_y = '_' * m + y[0]
         
-        return align_x, align_y
+        return aligned_x, aligned_y
     
-    # Divide: split x in the middle
+    # divide step - split x in the middle
     mid = m // 2
     
-    # Compute costs for left and right halves
+    # compute costs for left and right halves
     left_costs = compute_alignment_cost_forward(x[:mid], y)
     right_costs = compute_alignment_cost_backward(x[mid:], y)
     
-    # Find optimal split point in y
+    # find optimal split point in y
     min_cost = float('inf')
     split_j = 0
     for j in range(n + 1):
@@ -170,24 +170,24 @@ def hirschberg(x, y):
             min_cost = cost
             split_j = j
     
-    # Conquer: recursively align left and right parts
+    # conquer step - recursively align left and right parts
     align_x_left, align_y_left = hirschberg(x[:mid], y[:split_j])
     align_x_right, align_y_right = hirschberg(x[mid:], y[split_j:])
     
     return align_x_left + align_x_right, align_y_left + align_y_right
 
-def compute_cost(align_x, align_y):
-    """Compute the total cost of an alignment"""
+def compute_cost(aligned_x, aligned_y):
+    """Computes the total cost of an alignment"""
     cost = 0
-    for i in range(len(align_x)):
-        if align_x[i] == '_' or align_y[i] == '_':
+    for i in range(len(aligned_x)):
+        if aligned_x[i] == '_' or aligned_y[i] == '_':
             cost += DELTA
         else:
-            cost += ALPHA[(align_x[i], align_y[i])]
+            cost += ALPHA[(aligned_x[i], aligned_y[i])]
     return cost
 
 def process_memory():
-    """Get current memory usage in KB"""
+    """Get current memory usage"""
     process = psutil.Process()
     memory_info = process.memory_info()
     memory_consumed = int(memory_info.rss / 1024)
@@ -195,46 +195,40 @@ def process_memory():
 
 def sequence_alignment_efficient(x, y):
     """Main efficient alignment function"""
-    align_x, align_y = hirschberg(x, y)
-    cost = compute_cost(align_x, align_y)
-    return cost, align_x, align_y
+    aligned_x, aligned_y = hirschberg(x, y)
+    cost = compute_cost(aligned_x, aligned_y)
+    return cost, aligned_x, aligned_y
 
-def write_output(output_path, cost, align_x, align_y, time_ms, memory_kb):
+def write_output(output_file, cost, aligned_x, aligned_y, total_time, total_memory):
     """Write results to output file"""
-    with open(output_path, 'w') as f:
+    with open(output_file, 'w') as f:
         f.write(f"{cost}\n")
-        f.write(f"{align_x}\n")
-        f.write(f"{align_y}\n")
-        f.write(f"{time_ms}\n")
-        f.write(f"{memory_kb}\n")
+        f.write(f"{aligned_x}\n")
+        f.write(f"{aligned_y}\n")
+        f.write(f"{total_time}\n")
+        f.write(f"{total_memory}\n")
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: python efficient.py <input_file> <output_file>")
+        print("Usage: python basic.py <input_file> <output_file>")
         sys.exit(1)
     
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
-    
-    # Read and generate strings
-    str1, str2 = read_input(input_path)
-    
-    # Measure performance
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    # eead and generate strings
+    str1, str2 = read_input(input_file)
+    # measure performance
     start_time = time.time()
-    memory_before = process_memory()
-    
-    # Run alignment
-    cost, align_x, align_y = sequence_alignment_efficient(str1, str2)
-    
-    memory_after = process_memory()
+    initial_memory_= process_memory()
+    # run alignment function
+    cost, aligned_x, aligned_y = sequence_alignment_efficient(str1, str2)
+    # calculate metrics
+    final_memory = process_memory()
     end_time = time.time()
-    
-    # Calculate metrics
-    time_ms = (end_time - start_time) * 1000
-    memory_kb = memory_after - memory_before
-    
-    # Write output
-    write_output(output_path, cost, align_x, align_y, time_ms, memory_kb)
+    total_time = (end_time - start_time) * 1000
+    total_memory = final_memory - initial_memory_
+    # write output
+    write_output(output_file, cost, aligned_x, aligned_y, total_time, total_memory)
 
 if __name__ == "__main__":
     main()
